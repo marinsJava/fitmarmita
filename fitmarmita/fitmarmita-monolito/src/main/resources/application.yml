@@ -1,0 +1,44 @@
+server:
+  port: ${SERVER_PORT:8080}
+
+spring:
+  application:
+    name: fitmarmita-api
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/fitmarmita}
+    username: ${DB_USER:fitmarmita}
+    password: ${DB_PASSWORD:dev_password}
+  jpa:
+    hibernate:
+      ddl-auto: validate      # quem manda no schema e o Flyway
+    open-in-view: false
+    properties:
+      hibernate:
+        format_sql: true
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+
+fitmarmita:
+  jwt:
+    secret: ${JWT_SECRET:8ZBa6ay+cxEgrTszI2cVzNF9ANMWw97QNlc8p6vJleuW8+sKBA0Pz3DKHAhbgKSli+jb/NNLsJub1itkZwqH2w==}
+    expiracao-horas: ${JWT_EXPIRACAO_HORAS:24}
+  login:
+    max-tentativas: ${LOGIN_MAX_TENTATIVAS:5}
+    minutos-bloqueio: ${LOGIN_MINUTOS_BLOQUEIO:15}
+  cors:
+    allowed-origin: ${CORS_ALLOWED_ORIGIN:http://localhost:5173}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      probes:
+        enabled: true
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html

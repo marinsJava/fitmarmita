@@ -1,0 +1,2 @@
+DROP TABLE IF EXISTS itens_pedido;
+DROP TABLE IF EXISTS pedidos;

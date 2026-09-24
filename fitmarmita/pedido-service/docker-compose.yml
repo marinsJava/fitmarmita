@@ -1,0 +1,35 @@
+services:
+  pedido-db:
+    image: postgres:16
+    container_name: fitmarmita-pedido-db
+    environment:
+      POSTGRES_DB: fitmarmita_pedido
+      POSTGRES_USER: fitmarmita
+      POSTGRES_PASSWORD: dev_password
+    ports:
+      - "5434:5432"          # 5432 = monolito, 5433 fica livre p/ um futuro usuario-service
+    volumes:
+      - pedido_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U fitmarmita -d fitmarmita_pedido"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  pedido-service:
+    build: .
+    container_name: fitmarmita-pedido-service
+    depends_on:
+      pedido-db:
+        condition: service_healthy
+    environment:
+      DB_URL: jdbc:postgresql://pedido-db:5432/fitmarmita_pedido
+      DB_USER: fitmarmita
+      DB_PASSWORD: dev_password
+      JWT_SECRET: troque-esta-chave-em-producao-com-no-minimo-32-caracteres
+      CARDAPIO_SERVICE_URL: http://host.docker.internal:8080
+    ports:
+      - "8082:8082"
+
+volumes:
+  pedido_pgdata:

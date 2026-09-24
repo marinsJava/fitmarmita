@@ -1,0 +1,209 @@
+{
+  "info": {
+    "name": "FitMarmita",
+    "description": "Coleção do monólito FitMarmita-api (auth, usuário, cardápio) e do pedido-service. O login salva o token JWT automaticamente numa variável de coleção — as requisições seguintes já usam esse token.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "base_url_monolito", "value": "http://localhost:8080", "type": "string" },
+    { "key": "base_url_pedido", "value": "http://localhost:8082", "type": "string" },
+    { "key": "jwt_token", "value": "", "type": "string" },
+    { "key": "usuario_email", "value": "maria@email.com", "type": "string" },
+    { "key": "usuario_senha", "value": "senhaForte123", "type": "string" },
+    { "key": "marmita_id", "value": "1", "type": "string" },
+    { "key": "pedido_id", "value": "1", "type": "string" }
+  ],
+  "item": [
+    {
+      "name": "FitMarmita-api (monólito)",
+      "item": [
+        {
+          "name": "Usuários",
+          "item": [
+            {
+              "name": "Criar usuário",
+              "request": {
+                "method": "POST",
+                "header": [
+                  { "key": "Content-Type", "value": "application/json" }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"nome\": \"Maria Silva\",\n  \"email\": \"{{usuario_email}}\",\n  \"senha\": \"{{usuario_senha}}\",\n  \"telefone\": \"21999998888\"\n}"
+                },
+                "url": {
+                  "raw": "{{base_url_monolito}}/api/v1/usuarios",
+                  "host": ["{{base_url_monolito}}"],
+                  "path": ["api", "v1", "usuarios"]
+                },
+                "description": "Rota pública. Cadastra o usuário que será usado no login logo abaixo."
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Autenticação",
+          "item": [
+            {
+              "name": "Login",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "// Guarda o token na coleção para as demais requisições usarem via Bearer {{jwt_token}}.",
+                      "if (pm.response.code === 200) {",
+                      "    const body = pm.response.json();",
+                      "    pm.collectionVariables.set('jwt_token', body.token);",
+                      "    console.log('jwt_token atualizado');",
+                      "} else {",
+                      "    console.warn('Login falhou, jwt_token não foi atualizado');",
+                      "}"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  { "key": "Content-Type", "value": "application/json" }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email\": \"{{usuario_email}}\",\n  \"senha\": \"{{usuario_senha}}\"\n}"
+                },
+                "url": {
+                  "raw": "{{base_url_monolito}}/api/v1/auth/login",
+                  "host": ["{{base_url_monolito}}"],
+                  "path": ["api", "v1", "auth", "login"]
+                },
+                "description": "Rota pública. O script de teste (aba Tests) salva o token retornado em {{jwt_token}} automaticamente."
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Cardápio",
+          "item": [
+            {
+              "name": "Cardápio semanal",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url_monolito}}/api/v1/cardapio/semanal?tags=",
+                  "host": ["{{base_url_monolito}}"],
+                  "path": ["api", "v1", "cardapio", "semanal"],
+                  "query": [
+                    { "key": "tags", "value": "", "description": "Opcional, ex: low-carb,vegana" }
+                  ]
+                },
+                "description": "Rota pública."
+              },
+              "response": []
+            },
+            {
+              "name": "Detalhar marmita",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [{ "key": "token", "value": "{{jwt_token}}", "type": "string" }]
+                },
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url_monolito}}/api/v1/marmitas/{{marmita_id}}",
+                  "host": ["{{base_url_monolito}}"],
+                  "path": ["api", "v1", "marmitas", "{{marmita_id}}"]
+                },
+                "description": "Requer JWT. É esta mesma rota que o pedido-service chama via Feign para conferir preço e disponibilidade."
+              },
+              "response": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "pedido-service",
+      "item": [
+        {
+          "name": "Criar pedido",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    const body = pm.response.json();",
+                  "    pm.collectionVariables.set('pedido_id', body.id);",
+                  "    console.log('pedido_id atualizado: ' + body.id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{jwt_token}}", "type": "string" }]
+            },
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"formaPagamento\": \"PIX\",\n  \"enderecoEntrega\": \"Rua A, 123\",\n  \"itens\": [\n    { \"marmitaId\": {{marmita_id}}, \"quantidade\": 2 }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{base_url_pedido}}/api/v1/pedidos",
+              "host": ["{{base_url_pedido}}"],
+              "path": ["api", "v1", "pedidos"]
+            },
+            "description": "Requer JWT (com a claim uid). O script de teste salva o id do pedido criado em {{pedido_id}}."
+          },
+          "response": []
+        },
+        {
+          "name": "Detalhar pedido",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{jwt_token}}", "type": "string" }]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url_pedido}}/api/v1/pedidos/{{pedido_id}}",
+              "host": ["{{base_url_pedido}}"],
+              "path": ["api", "v1", "pedidos", "{{pedido_id}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Listar meus pedidos",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{jwt_token}}", "type": "string" }]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url_pedido}}/api/v1/pedidos",
+              "host": ["{{base_url_pedido}}"],
+              "path": ["api", "v1", "pedidos"]
+            }
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,20 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: fitmarmita-postgres
+    environment:
+      POSTGRES_DB: fitmarmita
+      POSTGRES_USER: fitmarmita
+      POSTGRES_PASSWORD: dev_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - fitmarmita_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U fitmarmita -d fitmarmita"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  fitmarmita_pgdata:

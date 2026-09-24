@@ -1,0 +1,47 @@
+server:
+  port: ${SERVER_PORT:8082}
+
+spring:
+  application:
+    name: pedido-service
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5434/fitmarmita_pedido}
+    username: ${DB_USER:fitmarmita}
+    password: ${DB_PASSWORD:dev_password}
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+    properties:
+      hibernate:
+        format_sql: true
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+
+fitmarmita:
+  jwt:
+    secret: ${JWT_SECRET:8ZBa6ay+cxEgrTszI2cVzNF9ANMWw97QNlc8p6vJleuW8+sKBA0Pz3DKHAhbgKSli+jb/NNLsJub1itkZwqH2w==}
+  cardapio-service:
+    # Aponta para o monolito ate o cardapio ser extraido tambem.
+    url: ${CARDAPIO_SERVICE_URL:http://localhost:8080}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      probes:
+        enabled: true
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+
+logging:
+  level:
+    # O Logger.Level do FeignClientConfig so produz saida se o logger
+    # da interface do client estiver em DEBUG (ou mais verboso).
+    br.com.fitmarmita.pedido.client.CardapioClient: DEBUG
