@@ -1,0 +1,26 @@
+Pacote: config
+================
+
+Classes de configuracao Spring que voce vai criar aqui:
+
+1. SecurityConfig.java
+   - Configura o SecurityFilterChain
+   - Define rotas publicas (login, cadastro, swagger) e protegidas
+   - Registra o BCryptPasswordEncoder
+   - Adiciona o JwtAuthenticationFilter (do pacote auth) antes do filtro padrao
+   - Anota com @Configuration e @EnableWebSecurity
+
+2. CorsConfig.java
+   - Implementa WebMvcConfigurer
+   - Permite que o frontend React (http://localhost:5173) chame a API
+   - Sem CORS, o navegador bloqueia as requisicoes
+
+3. OpenApiConfig.java
+   - Define metadados da documentacao (titulo, versao, descricao)
+   - Adiciona o esquema de seguranca JWT para o Swagger UI
+
+Ordem sugerida de implementacao:
+  1. SecurityConfig minimo (libera tudo) -> sobe a aplicacao
+  2. OpenApiConfig -> Swagger funciona
+  3. CorsConfig -> frontend funciona
+  4. Volta no SecurityConfig e protege endpoints

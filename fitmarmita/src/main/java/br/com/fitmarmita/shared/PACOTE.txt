@@ -1,0 +1,20 @@
+Pacote: shared
+==============
+
+Codigo compartilhado entre os modulos de dominio (usuario, cardapio, pedido).
+
+Sub-pacote: shared/exception
+----------------------------
+1. BusinessException.java       - extends RuntimeException, regra de negocio violada
+2. NotFoundException.java       - extends RuntimeException, recurso nao encontrado
+3. GlobalExceptionHandler.java  - @RestControllerAdvice, intercepta excecoes e converte em ErrorResponse
+
+Sub-pacote: shared/dto
+----------------------
+1. ErrorResponse.java           - record com timestamp, status, mensagem, path, campos invalidos
+                                  Padroniza todas as respostas de erro da API
+
+Por que ter um pacote shared?
+- Evita duplicacao: a mesma BusinessException serve para usuario, pedido, cardapio
+- Padronizacao: todas as APIs respondem erros no mesmo formato JSON
+- Centraliza tratamento: 1 lugar so para mexer em todos os erros
