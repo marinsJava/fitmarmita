@@ -10,7 +10,7 @@ spring:
     password: ${DB_PASSWORD:dev_password}
   jpa:
     hibernate:
-      ddl-auto: validate      # quem manda no schema e o Flyway
+      ddl-auto: validate
     open-in-view: false
     properties:
       hibernate:
