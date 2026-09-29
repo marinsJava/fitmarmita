@@ -1,0 +1,11 @@
+fitmarmita:
+  cors:
+    allowed-origin: http://localhost:5173
+
+logging:
+  level:
+    br.com.fitmarmita: DEBUG
+
+springdoc:
+  swagger-ui:
+    enabled: true

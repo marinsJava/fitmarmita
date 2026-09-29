@@ -1,0 +1,11 @@
+fitmarmita:
+  cardapio-service:
+    url: http://localhost:8080
+
+logging:
+  level:
+    br.com.fitmarmita.pedido.client.CardapioClient: DEBUG
+
+springdoc:
+  swagger-ui:
+    enabled: true

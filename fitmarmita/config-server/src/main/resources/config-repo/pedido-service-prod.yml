@@ -1,0 +1,17 @@
+fitmarmita:
+  cardapio-service:
+    url: http://fitmarmita-api:8080
+
+logging:
+  level:
+    br.com.fitmarmita.pedido.client.CardapioClient: INFO
+
+springdoc:
+  swagger-ui:
+    enabled: false
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health

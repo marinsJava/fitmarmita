@@ -1,0 +1,128 @@
+# Orquestracao completa da solucao FitMarmita (Etapa 3).
+#
+# Sobe com um unico comando:
+#   docker compose up --build
+#
+# Componentes:
+#   config-server     -> Spring Cloud Config Server (porta 8888)
+#   postgres-api       -> banco da fitmarmita-api      (porta 5432)
+#   postgres-pedido     -> banco do pedido-service       (porta 5434)
+#   fitmarmita-api      -> aplicacao principal            (porta 8080)
+#   pedido-service      -> servico independente de pedido (porta 8082)
+#
+# Todos os servicos falam entre si pelo NOME do service dentro da rede
+# "fitmarmita-net" criada pelo Compose - nunca por localhost/127.0.0.1.
+
+services:
+  postgres-api:
+    image: postgres:16
+    container_name: fitmarmita-postgres
+    environment:
+      POSTGRES_DB: fitmarmita
+      POSTGRES_USER: fitmarmita
+      POSTGRES_PASSWORD: dev_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - fitmarmita_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U fitmarmita -d fitmarmita"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - fitmarmita-net
+
+  postgres-pedido:
+    image: postgres:16
+    container_name: fitmarmita-pedido-db
+    environment:
+      POSTGRES_DB: fitmarmita_pedido
+      POSTGRES_USER: fitmarmita
+      POSTGRES_PASSWORD: dev_password
+    ports:
+      - "5434:5432"
+    volumes:
+      - pedido_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U fitmarmita -d fitmarmita_pedido"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - fitmarmita-net
+
+  config-server:
+    build: ./config-server
+    container_name: fitmarmita-config-server
+    ports:
+      - "8888:8888"
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8888/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    networks:
+      - fitmarmita-net
+
+  fitmarmita-api:
+    build: ./fitmarmita-monolito
+    container_name: fitmarmita-api
+    depends_on:
+      postgres-api:
+        condition: service_healthy
+      config-server:
+        condition: service_healthy
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      CONFIG_SERVER_URL: http://config-server:8888
+      DB_URL: jdbc:postgresql://postgres-api:5432/fitmarmita
+      DB_USER: fitmarmita
+      DB_PASSWORD: dev_password
+      JWT_SECRET: troque-esta-chave-em-producao-com-no-minimo-32-caracteres
+      CORS_ALLOWED_ORIGIN: http://localhost:5173
+    ports:
+      - "8080:8080"
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8080/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    networks:
+      - fitmarmita-net
+
+  pedido-service:
+    build: ./pedido-service
+    container_name: fitmarmita-pedido-service
+    depends_on:
+      postgres-pedido:
+        condition: service_healthy
+      config-server:
+        condition: service_healthy
+      fitmarmita-api:
+        condition: service_started
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      CONFIG_SERVER_URL: http://config-server:8888
+      DB_URL: jdbc:postgresql://postgres-pedido:5432/fitmarmita_pedido
+      DB_USER: fitmarmita
+      DB_PASSWORD: dev_password
+      # Mesmo segredo do monolito: o pedido-service so VALIDA o JWT emitido
+      # pela fitmarmita-api, os dois precisam concordar na mesma chave.
+      JWT_SECRET: troque-esta-chave-em-producao-com-no-minimo-32-caracteres
+      # Nome do service no Compose, nunca host.docker.internal/localhost.
+      CARDAPIO_SERVICE_URL: http://fitmarmita-api:8080
+    ports:
+      - "8082:8082"
+    networks:
+      - fitmarmita-net
+
+networks:
+  fitmarmita-net:
+    driver: bridge
+
+volumes:
+  fitmarmita_pgdata:
+  pedido_pgdata:

@@ -1,0 +1,17 @@
+fitmarmita:
+  cors:
+    allowed-origin: https://app.fitmarmita.com.br
+
+logging:
+  level:
+    br.com.fitmarmita: INFO
+
+springdoc:
+  swagger-ui:
+    enabled: false
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health

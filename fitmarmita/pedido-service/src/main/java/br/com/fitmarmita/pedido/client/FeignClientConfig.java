@@ -10,11 +10,6 @@ import org.springframework.web.context.request.ServletRequestAttributes;
 
 import java.util.concurrent.TimeUnit;
 
-/**
- * Configuracao especifica do CardapioClient. NAO leva @Configuration:
- * se levasse, o Spring aplicaria estes beans a TODOS os FeignClients
- * do serviço, nao so a este.
- */
 public class FeignClientConfig {
 
     @Bean
@@ -24,8 +19,6 @@ public class FeignClientConfig {
 
     @Bean
     public Request.Options requestOptions() {
-        // conexao curta: se o cardapio nao responder rapido, falha e deixa
-        // o pedido cair no 503 em vez de travar a criacao do pedido.
         return new Request.Options(2, TimeUnit.SECONDS, 3, TimeUnit.SECONDS, true);
     }
 

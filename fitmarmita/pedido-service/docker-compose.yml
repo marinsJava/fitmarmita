@@ -7,7 +7,7 @@ services:
       POSTGRES_USER: fitmarmita
       POSTGRES_PASSWORD: dev_password
     ports:
-      - "5434:5432"          # 5432 = monolito, 5433 fica livre p/ um futuro usuario-service
+      - "5434:5432"
     volumes:
       - pedido_pgdata:/var/lib/postgresql/data
     healthcheck:
