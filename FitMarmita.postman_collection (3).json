@@ -1,0 +1,659 @@
+{
+  "info": {
+    "_postman_id": "ddb299b5-fd58-43fb-8c9e-011fbb005940",
+    "name": "FitMarmita - Etapas 3 e 4",
+    "description": "Collection para testar a solucao FitMarmita completa rodando via docker compose a partir da raiz do repositorio (config-server, fitmarmita-api, pedido-service, RabbitMQ e os dois bancos Postgres).\n\n## Como usar\n1. Suba tudo: `docker compose up --build` na raiz do projeto.\n2. Rode as pastas NA ORDEM (de cima para baixo) usando o Collection Runner, ou execute manualmente: **Config Server** e **Health Checks** primeiro (so para conferir que subiu tudo), depois **Usuarios e Autenticacao** (cadastra um usuario novo e faz login, guardando o token automaticamente), depois **Cardapio**, **Batch** e **Pedidos**.\n3. As variaveis `email`, `token`, `marmitaId`, `usuarioId` e `pedidoId` sao preenchidas automaticamente pelos scripts de teste de cada request - nao precisa editar nada manualmente, so rodar em ordem.\n4. A pasta **RabbitMQ (Management API)** consulta a fila `usuario.cadastrado.queue` direto na API de administracao do broker (`localhost:15672`), para voce confirmar visualmente que a mensageria esta funcionando sem precisar abrir o navegador.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrlApi",
+      "value": "http://localhost:8080",
+      "type": "string"
+    },
+    {
+      "key": "baseUrlPedido",
+      "value": "http://localhost:8082",
+      "type": "string"
+    },
+    {
+      "key": "baseUrlConfig",
+      "value": "http://localhost:8888",
+      "type": "string"
+    },
+    {
+      "key": "baseUrlRabbitMQ",
+      "value": "http://localhost:15672",
+      "type": "string"
+    },
+    {
+      "key": "email",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "senha",
+      "value": "SenhaForte123",
+      "type": "string"
+    },
+    {
+      "key": "token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "usuarioId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "marmitaId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "pedidoId",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "1. Config Server",
+      "item": [
+        {
+          "name": "Health do Config Server",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrlConfig}}/actuator/health",
+              "host": [
+                "{{baseUrlConfig}}"
+              ],
+              "path": [
+                "actuator",
+                "health"
+              ]
+            },
+            "description": "Confirma que o Config Server subiu e esta respondendo."
+          },
+          "response": []
+        },
+        {
+          "name": "Config servida para fitmarmita-api (prod)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrlConfig}}/fitmarmita-api/prod",
+              "host": [
+                "{{baseUrlConfig}}"
+              ],
+              "path": [
+                "fitmarmita-api",
+                "prod"
+              ]
+            },
+            "description": "Mostra o JSON de propertySources que o Config Server serviria para a fitmarmita-api no profile 'prod' - confirma porta, CORS e politica de login centralizados."
+          },
+          "response": []
+        },
+        {
+          "name": "Config servida para pedido-service (prod)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrlConfig}}/pedido-service/prod",
+              "host": [
+                "{{baseUrlConfig}}"
+              ],
+              "path": [
+                "pedido-service",
+                "prod"
+              ]
+            },
+            "description": "Mesma ideia, para o pedido-service: confirma a URL do cardapio e a porta centralizadas."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "2. Health Checks das aplicacoes",
+      "item": [
+        {
+          "name": "Health da fitmarmita-api",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrlApi}}/actuator/health",
+              "host": [
+                "{{baseUrlApi}}"
+              ],
+              "path": [
+                "actuator",
+                "health"
+              ]
+            },
+            "description": "Deve responder {\"status\":\"UP\"}. Confirma conexao com postgres-api, RabbitMQ e Config Server."
+          },
+          "response": []
+        },
+        {
+          "name": "Health do pedido-service",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrlPedido}}/actuator/health",
+              "host": [
+                "{{baseUrlPedido}}"
+              ],
+              "path": [
+                "actuator",
+                "health"
+              ]
+            },
+            "description": "Deve responder {\"status\":\"UP\"}. Confirma conexao com postgres-pedido, RabbitMQ e Config Server."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "3. Usuarios e Autenticacao",
+      "item": [
+        {
+          "name": "Cadastrar usuario",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrlApi}}/api/v1/usuarios",
+              "host": [
+                "{{baseUrlApi}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "usuarios"
+              ]
+            },
+            "description": "Cadastra um usuario novo. O pre-request script gera um e-mail unico a cada execucao (para nao esbarrar na validacao de e-mail duplicado), e o test script guarda o id retornado em {{usuarioId}}.\n\nEsse cadastro TAMBEM publica o evento USUARIO_CADASTRADO no RabbitMQ - depois de rodar este request, confira a pasta 'RabbitMQ (Management API)'.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"nome\": \"Usuario de Teste\",\n    \"email\": \"{{email}}\",\n    \"senha\": \"{{senha}}\",\n    \"telefone\": \"11999999999\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const email = 'teste.' + Date.now() + '@fitmarmita.com';",
+                  "pm.collectionVariables.set('email', email);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 201 Created', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "const jsonData = pm.response.json();",
+                  "pm.collectionVariables.set('usuarioId', jsonData.id);",
+                  "",
+                  "pm.test('Resposta contem o e-mail cadastrado', function () {",
+                  "    pm.expect(jsonData.email).to.eql(pm.collectionVariables.get('email'));",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login (gera o token JWT)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrlApi}}/api/v1/auth/login",
+              "host": [
+                "{{baseUrlApi}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "login"
+              ]
+            },
+            "description": "Autentica com o usuario cadastrado no request anterior e guarda o token em {{token}}. Todos os requests protegidos (marmita por id, batch, pedidos) usam esse token automaticamente via Bearer Auth.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"email\": \"{{email}}\",\n    \"senha\": \"{{senha}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "const jsonData = pm.response.json();",
+                  "pm.collectionVariables.set('token', jsonData.token);",
+                  "",
+                  "pm.test('Token recebido', function () {",
+                  "    pm.expect(jsonData.token).to.be.a('string').and.not.empty;",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "4. Cardapio",
+      "item": [
+        {
+          "name": "Cardapio da semana (rota publica)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrlApi}}/api/v1/cardapio/semanal",
+              "host": [
+                "{{baseUrlApi}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "cardapio",
+                "semanal"
+              ]
+            },
+            "description": "Rota publica (nao exige token). O test script guarda o id da primeira marmita retornada em {{marmitaId}}, usado depois para detalhar a marmita e para criar um pedido."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "const jsonData = pm.response.json();",
+                  "pm.test('Retornou pelo menos uma marmita', function () {",
+                  "    pm.expect(jsonData.length).to.be.above(0);",
+                  "});",
+                  "",
+                  "if (jsonData.length > 0) {",
+                  "    pm.collectionVariables.set('marmitaId', jsonData[0].id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Cardapio da semana filtrando por tag",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrlApi}}/api/v1/cardapio/semanal?tags=fitness",
+              "host": [
+                "{{baseUrlApi}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "cardapio",
+                "semanal"
+              ],
+              "query": [
+                {
+                  "key": "tags",
+                  "value": "fitness"
+                }
+              ]
+            },
+            "description": "Mesma rota publica, com filtro por tag (ex.: fitness, vegana, low-carb, sem-lactose)."
+          },
+          "response": []
+        },
+        {
+          "name": "Detalhar marmita por id (requer JWT)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrlApi}}/api/v1/marmitas/{{marmitaId}}",
+              "host": [
+                "{{baseUrlApi}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "marmitas",
+                "{{marmitaId}}"
+              ]
+            },
+            "description": "Rota usada tambem pelo pedido-service (via Feign) para validar preco/disponibilidade na hora de montar um pedido. Exige token (rode Login antes).",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "5. Batch - Importacao de marmitas",
+      "item": [
+        {
+          "name": "Importar marmitas via CSV (Spring Batch)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrlApi}}/api/v1/batch/marmitas/importar",
+              "host": [
+                "{{baseUrlApi}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "batch",
+                "marmitas",
+                "importar"
+              ]
+            },
+            "description": "Dispara o Job importarMarmitasJob sob demanda, lendo fitmarmita-monolito/src/main/resources/batch/marmitas-importacao.csv. A resposta traz itensLidos, itensGravados e itensIgnorados (o CSV de exemplo tem de proposito uma linha sem nome e uma com preco invalido, que devem aparecer como ignoradas).",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "const jsonData = pm.response.json();",
+                  "console.log('Resultado do Job:', jsonData);",
+                  "",
+                  "pm.test('Pelo menos um item foi gravado', function () {",
+                  "    pm.expect(jsonData.itensGravados).to.be.above(0);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "6. Pedidos (pedido-service)",
+      "item": [
+        {
+          "name": "Criar pedido",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrlPedido}}/api/v1/pedidos",
+              "host": [
+                "{{baseUrlPedido}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "pedidos"
+              ]
+            },
+            "description": "Cria um pedido para o usuario autenticado. O pedido-service chama de volta a fitmarmita-api (GET /api/v1/marmitas/{id}) via Feign para validar preco e disponibilidade antes de salvar. Exige {{marmitaId}} (rode 'Cardapio da semana' antes) e {{token}} (rode Login antes). O id do pedido criado e guardado em {{pedidoId}}.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"formaPagamento\": \"PIX\",\n    \"enderecoEntrega\": \"Rua de Teste, 123 - Centro\",\n    \"itens\": [\n        {\n            \"marmitaId\": {{marmitaId}},\n            \"quantidade\": 2\n        }\n    ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 201 Created', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "const jsonData = pm.response.json();",
+                  "pm.collectionVariables.set('pedidoId', jsonData.id);",
+                  "",
+                  "pm.test('Valor total calculado', function () {",
+                  "    pm.expect(jsonData.valorTotal).to.be.above(0);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Detalhar pedido",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrlPedido}}/api/v1/pedidos/{{pedidoId}}",
+              "host": [
+                "{{baseUrlPedido}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "pedidos",
+                "{{pedidoId}}"
+              ]
+            },
+            "description": "Busca o pedido criado no request anterior. Exige {{pedidoId}} e {{token}}.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Listar pedidos do usuario autenticado",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrlPedido}}/api/v1/pedidos",
+              "host": [
+                "{{baseUrlPedido}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "pedidos"
+              ]
+            },
+            "description": "Lista todos os pedidos do usuario autenticado pelo token atual.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "7. RabbitMQ (Management API)",
+      "item": [
+        {
+          "name": "Visao geral do broker",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrlRabbitMQ}}/api/overview",
+              "host": [
+                "{{baseUrlRabbitMQ}}"
+              ],
+              "path": [
+                "api",
+                "overview"
+              ]
+            },
+            "description": "Confirma que o RabbitMQ esta de pe e respondendo pela API de administracao.",
+            "auth": {
+              "type": "basic",
+              "basic": [
+                {
+                  "key": "username",
+                  "value": "guest",
+                  "type": "string"
+                },
+                {
+                  "key": "password",
+                  "value": "guest",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Status da fila usuario.cadastrado.queue",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrlRabbitMQ}}/api/queues/%2F/usuario.cadastrado.queue",
+              "host": [
+                "{{baseUrlRabbitMQ}}"
+              ],
+              "path": [
+                "api",
+                "queues",
+                "%2F",
+                "usuario.cadastrado.queue"
+              ]
+            },
+            "description": "Consulta direta na API de administracao do RabbitMQ (nao e um endpoint da aplicacao). Campos uteis na resposta: 'messages_ready' (mensagens esperando um consumidor) e 'messages' (total na fila). Util para demonstrar que a mensagem fica esperando quando o pedido-service (consumidor) esta parado: rode 'docker compose stop pedido-service', cadastre um usuario, confira messages_ready > 0 aqui, depois rode 'docker compose start pedido-service' e confira que messages_ready volta a 0.",
+            "auth": {
+              "type": "basic",
+              "basic": [
+                {
+                  "key": "username",
+                  "value": "guest",
+                  "type": "string"
+                },
+                {
+                  "key": "password",
+                  "value": "guest",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}
