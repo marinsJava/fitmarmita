@@ -25,12 +25,16 @@ spring:
   flyway:
     enabled: true
     locations: classpath:db/migration
+  rabbitmq:
+    host: ${RABBITMQ_HOST:localhost}
+    port: ${RABBITMQ_PORT:5672}
+    username: ${RABBITMQ_USER:guest}
+    password: ${RABBITMQ_PASSWORD:guest}
 
 fitmarmita:
   jwt:
     secret: ${JWT_SECRET:8ZBa6ay+cxEgrTszI2cVzNF9ANMWw97QNlc8p6vJleuW8+sKBA0Pz3DKHAhbgKSli+jb/NNLsJub1itkZwqH2w==}
   cardapio-service:
-    # Aponta para o monolito ate o cardapio ser extraido tambem.
     url: ${CARDAPIO_SERVICE_URL:http://localhost:8080}
 
 management:
@@ -49,6 +53,4 @@ springdoc:
 
 logging:
   level:
-    # O Logger.Level do FeignClientConfig so produz saida se o logger
-    # da interface do client estiver em DEBUG (ou mais verboso).
     br.com.fitmarmita.pedido.client.CardapioClient: DEBUG

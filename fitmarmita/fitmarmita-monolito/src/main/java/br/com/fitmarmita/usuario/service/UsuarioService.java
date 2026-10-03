@@ -1,5 +1,6 @@
 package br.com.fitmarmita.usuario.service;
 
+import br.com.fitmarmita.mensageria.producer.UsuarioEventPublisher;
 import br.com.fitmarmita.shared.exception.DuplicateResourceException;
 import br.com.fitmarmita.shared.exception.NotFoundException;
 import br.com.fitmarmita.usuario.dto.CriarUsuarioRequest;
@@ -19,6 +20,7 @@ public class UsuarioService {
 
     private final UsuarioRepository repository;
     private final PasswordEncoder passwordEncoder;
+    private final UsuarioEventPublisher usuarioEventPublisher;
 
     @Value("${fitmarmita.login.max-tentativas:5}")
     private int maxTentativas;
@@ -38,7 +40,11 @@ public class UsuarioService {
         usuario.setTelefone(request.telefone());
         usuario.setAtivo(true);
         usuario.setTentativasLogin(0);
-        return repository.save(usuario);
+        Usuario salvo = repository.save(usuario);
+
+        usuarioEventPublisher.publicarUsuarioCadastrado(salvo.getId(), salvo.getNome(), salvo.getEmail());
+
+        return salvo;
     }
 
     @Transactional(readOnly = true)

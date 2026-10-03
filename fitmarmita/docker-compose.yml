@@ -1,17 +1,3 @@
-# Orquestracao completa da solucao FitMarmita (Etapa 3).
-#
-# Sobe com um unico comando:
-#   docker compose up --build
-#
-# Componentes:
-#   config-server     -> Spring Cloud Config Server (porta 8888)
-#   postgres-api       -> banco da fitmarmita-api      (porta 5432)
-#   postgres-pedido     -> banco do pedido-service       (porta 5434)
-#   fitmarmita-api      -> aplicacao principal            (porta 8080)
-#   pedido-service      -> servico independente de pedido (porta 8082)
-#
-# Todos os servicos falam entre si pelo NOME do service dentro da rede
-# "fitmarmita-net" criada pelo Compose - nunca por localhost/127.0.0.1.
 
 services:
   postgres-api:
@@ -52,6 +38,24 @@ services:
     networks:
       - fitmarmita-net
 
+  rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    container_name: fitmarmita-rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    networks:
+      - fitmarmita-net
+
   config-server:
     build: ./config-server
     container_name: fitmarmita-config-server
@@ -74,6 +78,8 @@ services:
         condition: service_healthy
       config-server:
         condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
     environment:
       SPRING_PROFILES_ACTIVE: prod
       CONFIG_SERVER_URL: http://config-server:8888
@@ -82,6 +88,10 @@ services:
       DB_PASSWORD: dev_password
       JWT_SECRET: troque-esta-chave-em-producao-com-no-minimo-32-caracteres
       CORS_ALLOWED_ORIGIN: http://localhost:5173
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
+      RABBITMQ_USER: guest
+      RABBITMQ_PASSWORD: guest
     ports:
       - "8080:8080"
     healthcheck:
@@ -101,6 +111,8 @@ services:
         condition: service_healthy
       config-server:
         condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
       fitmarmita-api:
         condition: service_started
     environment:
@@ -109,11 +121,12 @@ services:
       DB_URL: jdbc:postgresql://postgres-pedido:5432/fitmarmita_pedido
       DB_USER: fitmarmita
       DB_PASSWORD: dev_password
-      # Mesmo segredo do monolito: o pedido-service so VALIDA o JWT emitido
-      # pela fitmarmita-api, os dois precisam concordar na mesma chave.
       JWT_SECRET: troque-esta-chave-em-producao-com-no-minimo-32-caracteres
-      # Nome do service no Compose, nunca host.docker.internal/localhost.
       CARDAPIO_SERVICE_URL: http://fitmarmita-api:8080
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
+      RABBITMQ_USER: guest
+      RABBITMQ_PASSWORD: guest
     ports:
       - "8082:8082"
     networks:

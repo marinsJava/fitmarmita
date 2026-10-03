@@ -1,0 +1,7 @@
+nome,descricao,preco,calorias,semanaReferencia
+Strogonoff de Frango Fit,Strogonoff de frango com creme de leite light e arroz integral,26.90,410,2026-10-05
+Omelete de Claras com Espinafre,Claras de ovo com espinafre refogado e batata doce assada,19.90,290,2026-10-05
+Wrap de Frango com Salada,Wrap integral com frango desfiado e salada verde,21.50,360,2026-10-05
+Bowl de Quinoa com Legumes,Quinoa com legumes grelhados e molho de iogurte,23.90,,2026-10-05
+,Descricao sem nome - deve ser ignorada pelo processor,20.00,300,2026-10-05
+Marmita com Preco Invalido,Preco preenchido errado - deve ser ignorada,abc,300,2026-10-05
